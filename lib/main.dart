@@ -5,7 +5,7 @@ import 'alarm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // تهيئة خدمة الإشعارات عند بدء التشغيل
+  // تهيئة خدمة الإشعارات والتوقيت عند بدء التشغيل
   await AlarmService.init();
   runApp(const DawaiProApp());
 }
