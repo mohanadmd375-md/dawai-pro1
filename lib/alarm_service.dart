@@ -1,30 +1,36 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class AlarmService {
-  static final AlarmService instance = AlarmService._init();
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
-  AlarmService._init();
-
-  Future<void> init() async {
-    // إعدادات أندرويد لأيقونة الإشعارات
+  static Future<void> init() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
 
     await _notificationsPlugin.initialize(initializationSettings);
   }
 
-  // دالة لجدولة إشعار/تنبيه الدواء
-  Future<void> scheduleAlarm({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime scheduledTime,
-  }) async {
-    // سيتم ربطها بجدولة المواعيد الفعلية هنا
+  static Future<void> showInstantNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'dawai_alarm_channel',
+      'تنبيهات الأدوية',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await _notificationsPlugin.show(
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
+    );
   }
 }
