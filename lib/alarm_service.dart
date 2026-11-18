@@ -7,7 +7,6 @@ class AlarmService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> init() async {
-    // تهيئة المناطق الزمنية للجدولة الدقيقة
     tz.initializeTimeZones();
 
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -19,7 +18,6 @@ class AlarmService {
     await _notificationsPlugin.initialize(initializationSettings);
   }
 
-  // إشعار فوري للاختبار
   static Future<void> showInstantNotification(String title, String body) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
@@ -40,7 +38,6 @@ class AlarmService {
     );
   }
 
-  // جدولة إشعار في وقت محدد
   static Future<void> scheduleNotification({
     required int id,
     required String title,
