@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'add_medication_screen.dart';
+import 'alarm_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // تهيئة خدمة الإشعارات عند بدء التشغيل
+  await AlarmService.init();
   runApp(const DawaiProApp());
 }
 
@@ -71,12 +75,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text('الجرعة: ${med['dosage']} | الموعد: ${med['time']}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        await DatabaseHelper.instance.deleteMedication(med['id']);
-                        _loadMedications();
-                      },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // زر تجريبي لاختبار الإشعار فوراً
+                        IconButton(
+                          icon: const Icon(Icons.notifications_active, color: Colors.blue),
+                          onPressed: () async {
+                            await AlarmService.showInstantNotification(
+                              'موعد الدواء: ${med['name']}',
+                              'خذ الجرعة الآن: ${med['dosage']}',
+                            );
+                          },
+                        ),
+                        // زر الحذف
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            await DatabaseHelper.instance.deleteMedication(med['id']);
+                            _loadMedications();
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -84,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // الانتقال لشاشة إضافة الدواء والانتظار حتى العودة لتحديث القائمة
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
