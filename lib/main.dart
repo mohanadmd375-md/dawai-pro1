@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
-// تعريف كلاس إدارة الإشعارات عالمياً داخل الملف
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // إعدادات التهيئة لنظام أندرويد
+  // تهيئة قاعدة بيانات المناطق الزمنية وضبط توقيت بغداد
+  tz.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('Asia/Baghdad'));
+
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -16,8 +20,14 @@ void main() async {
     android: initializationSettingsAndroid,
   );
 
-  // تهيئة بلجن الإشعارات
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  // طلب صلاحيات الإشعارات والمنبهات الدقيقة على أندرويد (Android 13 / 14+)
+  final androidPlugin =
+      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+  await androidPlugin?.requestNotificationsPermission();
+  await androidPlugin?.requestExactAlarmsPermission();
 
   runApp(const DawaiProApp());
 }
@@ -53,7 +63,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   String _selectedTimeText = "لم يتم اختيار الوقت بعد";
   TimeOfDay? _selectedTime;
 
-  // دالة اختيار الوقت بصرياً
   Future<void> _pickMedicineTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -76,31 +85,66 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         _selectedTime = picked;
         _selectedTimeText = picked.format(context);
       });
-      // تجربة إرسال إشعار فوري عند اختيار الوقت للتأكد من عمل النظام
-      _showTestNotification();
+
+      // جدولة المنبه الحقيقي في الوقت المختار
+      await _scheduleMedicineAlarm(picked);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF111E2E),
+            content: Text(
+              'تم جدولة منبه الدواء بنجاح في الساعة: ${picked.format(context)}',
+              style: const TextStyle(color: Color(0xFF00FF88)),
+            ),
+          ),
+        );
+      }
     }
   }
 
-  // دالة اختبار إرسال الإشعار الطبي الفاخر
-  Future<void> _showTestNotification() async {
+  // دالة جدولة المنبه في وقت محدد بدقة
+  Future<void> _scheduleMedicineAlarm(TimeOfDay time) async {
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      time.hour,
+      time.minute,
+    );
+
+    // إذا كان الوقت المختار قد مضى اليوم، نجدوله لليوم التالي
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'dawai_pro_channel_id',
-      'تنبيهات الأدوية',
-      channelDescription: 'قناة خاصة بمنبهات الأدوية الموثوقة',
+      'dawai_pro_alarm_channel',
+      'منبهات مواعيد الأدوية',
+      channelDescription: 'تنبيهات دقيقة لمواعيد الأدوية اليومية',
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
       color: Color(0xFF00FF88),
+      category: AndroidNotificationCategory.alarm,
     );
 
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      'دوائي برو | موعد الدواء',
-      'حان الآن وقت تناول جرعة الدواء المحددة في: $_selectedTimeText',
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      1,
+      'DAWAI PRO | موعد الدواء',
+      'حان الآن موعد تناول الدواء المجدول (${time.format(context)})',
+      scheduledDate,
       platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
@@ -127,7 +171,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 30),
-            
+
             // زر اختيار الوقت بصرياً
             ElevatedButton.icon(
               onPressed: () => _pickMedicineTime(context),
@@ -145,7 +189,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                 ),
               ),
             ),
-            
+
             const Spacer(),
 
             // حقوق التطوير المهنية
