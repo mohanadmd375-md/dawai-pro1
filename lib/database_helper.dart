@@ -41,7 +41,6 @@ class DatabaseHelper {
     return await db.insert('medications', row);
   }
 
-  // تم تصحيح نوع الإرجاع هنا ليصبح متوافقاً مع لغة دارت
   Future<List>> queryAllMedications() async {
     final db = await instance.database;
     return await db.query('medications');
