@@ -9,7 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_local_notifications: ^17.2.1  # حزمة الإشعارات المحلية الأساسية
+  flutter_local_notifications: ^17.2.1
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:
