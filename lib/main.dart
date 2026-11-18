@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
+import 'add_medication_screen.dart';
 
 void main() {
   runApp(const DawaiProApp());
@@ -45,17 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // دالة تجريبية لإضافة دواء سريع
-  Future<void> _addDummyMedication() async {
-    await DatabaseHelper.instance.insertMedication({
-      'name': 'بانادول',
-      'dosage': 'حبة واحدة',
-      'time': '08:00 ص',
-      'notes': 'بعد الفطور',
-    });
-    _loadMedications();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,10 +64,13 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (context, index) {
                 final med = _medications[index];
                 return Card(
-                  margin: const EdgeInsets.all(8.0),
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: ListTile(
-                    title: Text(med['name'] ?? ''),
-                    subtitle: Text('الجرعة: ${med['dosage']} - الموعد: ${med['time']}'),
+                    title: Text(
+                      med['name'] ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('الجرعة: ${med['dosage']} | الموعد: ${med['time']}'),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
@@ -90,7 +83,18 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addDummyMedication,
+        onPressed: () async {
+          // الانتقال لشاشة إضافة الدواء والانتظار حتى العودة لتحديث القائمة
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddMedicationScreen(),
+            ),
+          );
+          if (result == true) {
+            _loadMedications();
+          }
+        },
         child: const Icon(Icons.add),
       ),
     );
