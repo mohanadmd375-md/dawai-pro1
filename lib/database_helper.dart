@@ -7,13 +7,13 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
-  Future<Database> get database async {
+  Future get database async {
     if (_database != null) return _database!;
     _database = await _initDB('dawai_pro.db');
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
+  Future _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
@@ -36,17 +36,17 @@ class DatabaseHelper {
     );
   }
 
-  Future<int> insertMedication(Map<String, dynamic> row) async {
+  Future insertMedication(Map row) async {
     final db = await instance.database;
     return await db.insert('medications', row);
   }
 
-  Future<List>> queryAllMedications() async {
+  Future queryAllMedications() async {
     final db = await instance.database;
     return await db.query('medications');
   }
 
-  Future<int> deleteMedication(int id) async {
+  Future deleteMedication(int id) async {
     final db = await instance.database;
     return await db.delete('medications', where: 'id = ?', whereArgs: [id]);
   }
