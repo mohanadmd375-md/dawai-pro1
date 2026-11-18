@@ -30,14 +30,14 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Fix and Upgrade Gradle Project
+        run: flutter create . --org com.dawaipro.app --platforms android
+
       - name: Build APK (Release)
-        run: |
-          flutter config --no-analytics
-          flutter build apk --release
+        run: flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: dawai-pro-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          
