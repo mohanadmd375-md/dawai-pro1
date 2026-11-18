@@ -30,9 +30,6 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Fix and Upgrade Gradle Project
-        run: flutter create . --org com.dawaipro.app --platforms android
-
       - name: Build APK (Release)
         run: flutter build apk --release
 
