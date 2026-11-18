@@ -29,9 +29,8 @@ jobs:
 
       - name: Clean and Recreate Android Project
         run: |
-          # الاحتفاظ بملفات الكود وحفظها، وإنشاء هيكل أندرويد نظيف متوافق
           rm -rf android ios linux macos windows web
-          flutter create . --platforms=android --org com.dawaipro.app
+          flutter create . --platforms=android --project-name=dawai_pro --org com.dawaipro.app
 
       - name: Install Dependencies
         run: flutter pub get
