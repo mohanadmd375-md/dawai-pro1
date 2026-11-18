@@ -1,5 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/initialize_all_timezones.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class AlarmService {
@@ -40,7 +40,7 @@ class AlarmService {
     );
   }
 
-  // جدولة إشعار في وقت محدد (مثلاً بعد ثوانٍ تجريبية أو ساعة محددة)
+  // جدولة إشعار في وقت محدد
   static Future<void> scheduleNotification({
     required int id,
     required String title,
