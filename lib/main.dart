@@ -5,7 +5,6 @@ import 'alarm_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // تهيئة خدمة التنبيهات
   await AlarmService.init();
 
   runApp(const DawaiProApp());
@@ -36,8 +35,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // القائمة المعرفة بالنوع السليم 100%
-  List> _medications = [];
+  List _medications = [];
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
@@ -50,16 +48,14 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadMedications();
   }
 
-  // جلب الأدوية من قاعدة البيانات
-  Future<void> _loadMedications() async {
+  Future _loadMedications() async {
     final data = await DatabaseHelper.instance.queryAllMedications();
     setState(() {
       _medications = data;
     });
   }
 
-  // إضافة دواء جديد مع جدولة إشعار تجريبي
-  Future<void> _addMedication() async {
+  Future _addMedication() async {
     if (_nameController.text.isEmpty || _dosageController.text.isEmpty) {
       return;
     }
@@ -73,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     await DatabaseHelper.instance.insertMedication(row);
 
-    // إرسال إشعار فوري عند الإضافة للتأكيد
     await AlarmService.showInstantNotification(
       'تمت إضافة دواء جديد',
       'دواء: ${_nameController.text} (${_dosageController.text})',
@@ -88,8 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pop(context);
   }
 
-  // حذف دواء
-  Future<void> _deleteMedication(int id) async {
+  Future _deleteMedication(int id) async {
     await DatabaseHelper.instance.deleteMedication(id);
     _loadMedications();
   }
@@ -146,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
       ),
       body: _medications.isEmpty
-          const Center(
+          ? const Center(
               child: Text(
                 'لا توجد أدوية مضافة حالياً.\nاضغط على زر + لإضافة دواء.',
                 textAlign: TextAlign.center,
