@@ -25,15 +25,15 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE medications (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        dosage TEXT NOT NULL,
-        time TEXT NOT NULL,
-        notes TEXT
-      )
-    ''');
+    await db.execute(
+      'CREATE TABLE medications ('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'name TEXT NOT NULL, '
+      'dosage TEXT NOT NULL, '
+      'time TEXT NOT NULL, '
+      'notes TEXT'
+      ')',
+    );
   }
 
   Future<int> insertMedication(Map<String, dynamic> row) async {
