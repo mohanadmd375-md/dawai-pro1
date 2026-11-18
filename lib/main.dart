@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-void main() {
+// تعريف كلاس إدارة الإشعارات عالمياً داخل الملف
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // إعدادات التهيئة لنظام أندرويد
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+
+  // تهيئة بلجن الإشعارات
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   runApp(const DawaiProApp());
 }
 
@@ -35,7 +53,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   String _selectedTimeText = "لم يتم اختيار الوقت بعد";
   TimeOfDay? _selectedTime;
 
-  // دالة اختيار الوقت بدون إدخال يدوي
+  // دالة اختيار الوقت بصرياً
   Future<void> _pickMedicineTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -58,7 +76,32 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         _selectedTime = picked;
         _selectedTimeText = picked.format(context);
       });
+      // تجربة إرسال إشعار فوري عند اختيار الوقت للتأكد من عمل النظام
+      _showTestNotification();
     }
+  }
+
+  // دالة اختبار إرسال الإشعار الطبي الفاخر
+  Future<void> _showTestNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'dawai_pro_channel_id',
+      'تنبيهات الأدوية',
+      channelDescription: 'قناة خاصة بمنبهات الأدوية الموثوقة',
+      importance: Importance.max,
+      priority: Priority.high,
+      color: Color(0xFF00FF88),
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'دوائي برو | موعد الدواء',
+      'حان الآن وقت تناول جرعة الدواء المحددة في: $_selectedTimeText',
+      platformChannelSpecifics,
+    );
   }
 
   @override
