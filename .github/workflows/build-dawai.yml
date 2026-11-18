@@ -2,9 +2,7 @@ name: Build Dawai Pro APK
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -24,22 +22,16 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.x'
-          channel: 'stable'
           cache: true
 
-      - name: Clean and Recreate Android Project
-        run: |
-          rm -rf android ios linux macos windows web
-          flutter create . --platforms=android --project-name=dawai_pro --org com.dawaipro.app
-
-      - name: Install Dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK (Release)
+      - name: Build APK Release
         run: flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dawai-pro-release-apk
+          name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
