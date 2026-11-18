@@ -1,5 +1,5 @@
 name: dawai_pro1
-description: A new Flutter project.
+description: "A new Flutter project for reliable medication reminders."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,11 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  sqflite: ^2.3.0
-  path: ^1.8.3
-  flutter_local_notifications: ^17.0.0
-  permission_handler: ^11.3.0
-  timezone: ^0.9.2
+  flutter_local_notifications: ^17.2.1  # حزمة الإشعارات المحلية الأساسية
 
 dev_dependencies:
   flutter_test:
