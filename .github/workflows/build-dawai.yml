@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create Android files if missing
+        run: flutter create . --platforms=android --org com.dawaipro
+
       - name: Build APK Release
         run: flutter build apk --release --no-pub
 
