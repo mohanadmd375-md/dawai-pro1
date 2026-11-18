@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
-import 'database_helper.dart';
-import 'alarm_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  await AlarmService.init();
-
+void main() {
   runApp(const DawaiProApp());
 }
 
@@ -16,163 +10,114 @@ class DawaiProApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Dawai Pro',
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
+      title: 'DAWAI PRO 1',
       debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF0A1118),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF00FF88), // أخضر زمردي
+          surface: Color(0xFF111E2E), // كحلي فاخر
+        ),
+      ),
+      home: const AddMedicineScreen(),
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class AddMedicineScreen extends StatefulWidget {
+  const AddMedicineScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<AddMedicineScreen> createState() => _AddMedicineScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  List _medications = [];
+class _AddMedicineScreenState extends State<AddMedicineScreen> {
+  String _selectedTimeText = "لم يتم اختيار الوقت بعد";
+  TimeOfDay? _selectedTime;
 
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _dosageController = TextEditingController();
-  final TextEditingController _timeController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMedications();
-  }
-
-  Future _loadMedications() async {
-    final data = await DatabaseHelper.instance.queryAllMedications();
-    setState(() {
-      _medications = data;
-    });
-  }
-
-  Future _addMedication() async {
-    if (_nameController.text.isEmpty || _dosageController.text.isEmpty) {
-      return;
-    }
-
-    final row = {
-      'name': _nameController.text,
-      'dosage': _dosageController.text,
-      'time': _timeController.text.isEmpty ? '08:00 AM' : _timeController.text,
-      'notes': _notesController.text,
-    };
-
-    await DatabaseHelper.instance.insertMedication(row);
-
-    await AlarmService.showInstantNotification(
-      'تمت إضافة دواء جديد',
-      'دواء: ${_nameController.text} (${_dosageController.text})',
-    );
-
-    _nameController.clear();
-    _dosageController.clear();
-    _timeController.clear();
-    _notesController.clear();
-
-    _loadMedications();
-    Navigator.pop(context);
-  }
-
-  Future _deleteMedication(int id) async {
-    await DatabaseHelper.instance.deleteMedication(id);
-    _loadMedications();
-  }
-
-  void _showAddDialog() {
-    showDialog(
+  // دالة اختيار الوقت بدون إدخال يدوي
+  Future<void> _pickMedicineTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('إضافة دواء جديد'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'اسم الدواء'),
-                ),
-                TextField(
-                  controller: _dosageController,
-                  decoration: const InputDecoration(labelText: 'الجرعة (مثال: حبة واحدة)'),
-                ),
-                TextField(
-                  controller: _timeController,
-                  decoration: const InputDecoration(labelText: 'وقت التناول (مثال: 08:00 AM)'),
-                ),
-                TextField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(labelText: 'ملاحظات'),
-                ),
-              ],
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF00FF88),
+              surface: Color(0xFF111E2E),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: _addMedication,
-              child: const Text('حفظ'),
-            ),
-          ],
+          child: child!,
         );
       },
     );
+
+    if (picked != null) {
+      setState(() {
+        _selectedTime = picked;
+        _selectedTimeText = picked.format(context);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dawai Pro - إدارة الأدوية'),
-        centerTitle: true,
+        title: const Text('دوائي برو | DAWAI PRO 1'),
+        backgroundColor: const Color(0xFF111E2E),
+        elevation: 0,
       ),
-      body: _medications.isEmpty
-          ? const Center(
-              child: Text(
-                'لا توجد أدوية مضافة حالياً.\nاضغط على زر + لإضافة دواء.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'إضافة موعد دواء جديد',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF00FF88),
               ),
-            )
-          : ListView.builder(
-              itemCount: _medications.length,
-              itemBuilder: (context, index) {
-                final med = _medications[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.teal,
-                      child: Icon(Icons.medical_services, color: Colors.white),
-                    ),
-                    title: Text(med['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('الجرعة: ${med['dosage']} | الوقت: ${med['time']}\nملاحظات: ${med['notes']}'),
-                    isThreeLine: true,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteMedication(med['id']),
-                    ),
-                  ),
-                );
-              },
+              textAlign: TextAlign.center,
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        backgroundColor: Colors.teal,
-        child: const Icon(Icons.add, color: Colors.white),
+            const SizedBox(height: 30),
+            
+            // زر اختيار الوقت بصرياً
+            ElevatedButton.icon(
+              onPressed: () => _pickMedicineTime(context),
+              icon: const Icon(Icons.access_time, color: Color(0xFF00FF88)),
+              label: Text(
+                _selectedTimeText,
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF111E2E),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFF00FF88), width: 1),
+                ),
+              ),
+            ),
+            
+            const Spacer(),
+
+            // حقوق التطوير المهنية
+            const Center(
+              child: Text(
+                'تطوير المهندس مهند محمد علي',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
