@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'database_helper.dart';
 import 'add_medication_screen.dart';
 import 'alarm_service.dart';
@@ -7,7 +8,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // تهيئة خدمة الإشعارات والتوقيت عند بدء التشغيل
   await AlarmService.init();
+  
+  // طلب صلاحية الإشعارات تلقائياً عند بدء التطبيق
+  await _requestNotificationPermission();
+
   runApp(const DawaiProApp());
+}
+
+// دالة لطلب صلاحية الإشعارات من النظام
+Future<void> _requestNotificationPermission() async {
+  var status = await Permission.notification.status;
+  if (!status.isGranted) {
+    await Permission.notification.request();
+  }
 }
 
 class DawaiProApp extends StatelessWidget {
