@@ -27,9 +27,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Upgrade Gradle Wrapper
-        run: cd android && ./gradlew wrapper --gradle-version 8.3
-
       - name: Build APK Release
         run: flutter build apk --release --no-pub
 
