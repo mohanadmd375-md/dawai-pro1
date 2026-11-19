@@ -1,15 +1,17 @@
 name: dawai_pro
-description: DAWAI PRO persistent medication alarm application.
+description: "DAWAI PRO medication alarm application."
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.24.0 <3.25.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  alarm: ^5.15.0
+  alarm: ^5.1.5
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
