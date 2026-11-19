@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 final FlutterLocalNotificationsPlugin notificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  tz.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('Asia/Baghdad'));
 
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -19,6 +24,7 @@ Future<void> main() async {
       notificationsPlugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
   await androidPlugin?.requestNotificationsPermission();
+  await androidPlugin?.requestExactAlarmsPermission();
 
   runApp(const DawaiProApp());
 }
@@ -65,16 +71,36 @@ class _MedicationAlarmScreenState extends State<MedicationAlarmScreen> {
     }
   }
 
+  tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      time.hour,
+      time.minute,
+    );
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
+  }
+
   Future<void> _toggleAlarm() async {
     if (!_alarmActive) {
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
         'dawai_pro_channel',
         'تنبيهات الأدوية',
-        channelDescription: 'تنبيه مواعيد تناول الأدوية',
+        channelDescription: 'تنبيه مستمر لمواعيد تناول الأدوية',
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
+        ongoing: true,
+        autoCancel: false,
+        category: AndroidNotificationCategory.alarm,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
       );
 
       const NotificationDetails details =
@@ -85,12 +111,18 @@ class _MedicationAlarmScreenState extends State<MedicationAlarmScreen> {
           : _medicineController.text.trim();
 
       final String timeText = _selectedTime.format(context);
+      final tz.TZDateTime scheduledDate = _nextInstanceOfTime(_selectedTime);
 
-      await notificationsPlugin.show(
+      await notificationsPlugin.zonedSchedule(
         101,
         'DAWAI PRO - $medName',
         'حان وقت الدواء المجدول الساعة $timeText',
+        scheduledDate,
         details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
       );
 
       setState(() {
@@ -145,7 +177,7 @@ class _MedicationAlarmScreenState extends State<MedicationAlarmScreen> {
               onPressed: _toggleAlarm,
               icon: Icon(_alarmActive ? Icons.alarm_off : Icons.alarm_add),
               label: Text(
-                _alarmActive ? 'إيقاف التنبيه' : 'تفعيل التنبيه الآن',
+                _alarmActive ? 'إلغاء المنبه المجدول' : 'جدولة المنبه',
               ),
             ),
           ],
