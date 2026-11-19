@@ -12,6 +12,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Clean old generated files
+        run: |
+          rm -rf android build .dart_tool
+          flutter clean || true
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
