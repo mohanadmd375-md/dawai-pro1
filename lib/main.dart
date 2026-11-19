@@ -7,9 +7,9 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 const AndroidNotificationChannel kAlarmChannel = AndroidNotificationChannel(
-  'dawai_pro_alarm_channel_v3',
-  'تنبيهات ومواعيد الأدوية',
-  description: 'قناة إشعارات ومنبهات الأدوية الدقيقة',
+  'dawai_pro_alarm_channel_v4',
+  'منبهات أدوية دواي برو',
+  description: 'قناة منبهات الأدوية المخصصة للأوقات المحددة',
   importance: Importance.max,
   playSound: true,
   enableVibration: true,
@@ -47,7 +47,7 @@ class DawaiProApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'DAWAI PRO 1',
+      title: 'DAWAI PRO',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0A1118),
@@ -56,20 +56,23 @@ class DawaiProApp extends StatelessWidget {
           surface: Color(0xFF111E2E),
         ),
       ),
-      home: const TimerTestScreen(),
+      home: const CustomAlarmScreen(),
     );
   }
 }
 
-class TimerTestScreen extends StatefulWidget {
-  const TimerTestScreen({super.key});
+class CustomAlarmScreen extends StatefulWidget {
+  const CustomAlarmScreen({super.key});
 
   @override
-  State<TimerTestScreen> createState() => _TimerTestScreenState();
+  State<CustomAlarmScreen> createState() => _CustomAlarmScreenState();
 }
 
-class _TimerTestScreenState extends State<TimerTestScreen> {
-  String _statusText = "جاهز — ابدأ بالإشعار الفوري ثم جدولة دقيقة واحدة";
+class _CustomAlarmScreenScreenState extends State<CustomAlarmScreen> {} // syntax fix below
+
+class CustomAlarmScreenState extends State<CustomAlarmScreen> {
+  String _statusText = "جاهز — اختر ساعة محددة لضبط منبه الدواء";
+  String _scheduledTimeStr = "لم يتم ضبط منبه بعد";
 
   NotificationDetails _buildDetails() {
     final androidDetails = AndroidNotificationDetails(
@@ -86,65 +89,48 @@ class _TimerTestScreenState extends State<TimerTestScreen> {
     return NotificationDetails(android: androidDetails);
   }
 
-  Future<void> _showInstantNotification() async {
-    await flutterLocalNotificationsPlugin.show(
-      1,
-      'DAWAI PRO | إشعار فوري',
-      'إذا ظهر هذا الإشعار فالإشعارات تعمل على جهازك.',
-      _buildDetails(),
-    );
-
-    setState(() {
-      _statusText = "تم إرسال إشعار فوري الآن — تحقق من شريط الإشعارات";
-    });
-  }
-
-  Future<void> _scheduleAfterOneMinute() async {
-    final now = tz.TZDateTime.now(tz.local);
-    final target = now.add(const Duration(minutes: 1));
-
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      2,
-      'DAWAI PRO | منبه الموقت',
-      'حان وقت المنبه المجدول (${target.hour.toString().padLeft(2, '0')}:${target.minute.toString().padLeft(2, '0')})',
-      target,
-      _buildDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
-
-    setState(() {
-      _statusText =
-          "تم ضبط المنبه على ${target.hour.toString().padLeft(2, '0')}:${target.minute.toString().padLeft(2, '0')} — انتظر دقيقة كاملة";
-    });
-  }
-
-  Future<void> _pickCustomTime(BuildContext context) async {
-    final picked = await showTimePicker(
+  Future<void> _pickAndScheduleAlarm(BuildContext context) async {
+    // 1. فتح نافذة اختيار الوقت (الساعة والدقيقة)
+    final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF00FF88),
+              surface: Color(0xFF111E2E),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
-    if (picked == null) return;
 
+    if (pickedTime == null) return;
+
+    // 2. حساب الوقت بتوقيت بغداد المحلي
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
+    var scheduledDate = tz.TZDateTime(
       tz.local,
       now.year,
       now.month,
       now.day,
-      picked.hour,
-      picked.minute,
+      pickedTime.hour,
+      pickedTime.minute,
     );
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
+
+    // إذا كان الوقت الذي اختاره المستخدم قد مضى اليوم، اجعله لليوم القادم
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
+    // 3. جدولة المنبه بدقة عالية تعمل حتى في وضع السبات
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      3,
-      'DAWAI PRO | تنبيه وقت محدد',
-      'تنبيه الموقت المختار (${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')})',
-      scheduled,
+      100,
+      '💊 وقت الدواء - DAWAI PRO',
+      'حاث موعد تناول الدواء المحدد في الساعة ${pickedTime.format(context)}',
+      scheduledDate,
       _buildDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
@@ -152,8 +138,9 @@ class _TimerTestScreenState extends State<TimerTestScreen> {
     );
 
     setState(() {
-      _statusText =
-          "تمت جدولة الموقت على ${scheduled.hour.toString().padLeft(2, '0')}:${scheduled.minute.toString().padLeft(2, '0')}";
+      _scheduledTimeStr =
+          "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
+      _statusText = "تم ضبط المنبه بنجاح! يمكنك إغلاق التطبيق الآن.";
     });
   }
 
@@ -161,60 +148,63 @@ class _TimerTestScreenState extends State<TimerTestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DAWAI PRO | فحص الإشعار والموقت'),
+        title: const Text('DAWAI PRO | منبه الأدوية المخصص'),
         backgroundColor: const Color(0xFF111E2E),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Icon(
+              Icons.alarm_add_rounded,
+              size: 80,
+              color: Color(0xFF00FF88),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'وقت المنبه الحالي:',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _scheduledTimeStr,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF00FF88),
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 40),
             ElevatedButton.icon(
-              onPressed: _showInstantNotification,
-              icon: const Icon(Icons.notifications_active),
-              label: const Text('1. إشعار فوري الآن'),
+              onPressed: () => _pickAndScheduleAlarm(context),
+              icon: const Icon(Icons.access_time_filled),
+              label: const Text('اختر وقت المنبه (ساعة ودقيقة)'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00FF88),
                 foregroundColor: const Color(0xFF0A1118),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
-            ),
-            const SizedBox(height: 14),
-            ElevatedButton.icon(
-              onPressed: _scheduleAfterOneMinute,
-              icon: const Icon(Icons.alarm),
-              label: const Text('2. جدولة منبه بعد دقيقة واحدة'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF111E2E),
-                foregroundColor: const Color(0xFF00FF88),
-                side: const BorderSide(color: Color(0xFF00FF88)),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: () => _pickCustomTime(context),
-              icon: const Icon(Icons.access_time, color: Color(0xFF00FF88)),
-              label: const Text(
-                '3. اختيار وقت للموقت',
-                style: TextStyle(color: Colors.white),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white38),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 24),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: const Color(0xFF111E2E),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
               ),
               child: Text(
                 _statusText,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ),
           ],
