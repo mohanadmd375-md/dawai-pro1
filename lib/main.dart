@@ -68,9 +68,7 @@ class CustomAlarmScreen extends StatefulWidget {
   State<CustomAlarmScreen> createState() => _CustomAlarmScreenState();
 }
 
-class _CustomAlarmScreenScreenState extends State<CustomAlarmScreen> {} // syntax fix below
-
-class CustomAlarmScreenState extends State<CustomAlarmScreen> {
+class _CustomAlarmScreenState extends State<CustomAlarmScreen> {
   String _statusText = "جاهز — اختر ساعة محددة لضبط منبه الدواء";
   String _scheduledTimeStr = "لم يتم ضبط منبه بعد";
 
@@ -90,7 +88,6 @@ class CustomAlarmScreenState extends State<CustomAlarmScreen> {
   }
 
   Future<void> _pickAndScheduleAlarm(BuildContext context) async {
-    // 1. فتح نافذة اختيار الوقت (الساعة والدقيقة)
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -109,7 +106,6 @@ class CustomAlarmScreenState extends State<CustomAlarmScreen> {
 
     if (pickedTime == null) return;
 
-    // 2. حساب الوقت بتوقيت بغداد المحلي
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
       tz.local,
@@ -120,16 +116,14 @@ class CustomAlarmScreenState extends State<CustomAlarmScreen> {
       pickedTime.minute,
     );
 
-    // إذا كان الوقت الذي اختاره المستخدم قد مضى اليوم، اجعله لليوم القادم
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
-    // 3. جدولة المنبه بدقة عالية تعمل حتى في وضع السبات
     await flutterLocalNotificationsPlugin.zonedSchedule(
       100,
       '💊 وقت الدواء - DAWAI PRO',
-      'حاث موعد تناول الدواء المحدد في الساعة ${pickedTime.format(context)}',
+      'حان موعد تناول الدواء المحدد في الساعة ${pickedTime.format(context)}',
       scheduledDate,
       _buildDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -163,7 +157,7 @@ class CustomAlarmScreenState extends State<CustomAlarmScreen> {
               color: Color(0xFF00FF88),
             ),
             const SizedBox(height: 20),
-            Text(
+            const Text(
               'وقت المنبه الحالي:',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white70, fontSize: 16),
