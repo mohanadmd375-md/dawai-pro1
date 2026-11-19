@@ -1,53 +1,19 @@
+import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-
-const AndroidNotificationChannel kAlarmChannel = AndroidNotificationChannel(
-  'dawai_pro_alarm_channel_v5',
-  'منبهات أدوية دواي برو',
-  description: 'قناة منبهات الأدوية المخصصة للأوقات المحددة',
-  importance: Importance.max,
-  playSound: true,
-  enableVibration: true,
-);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('Asia/Baghdad'));
-
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-
-  const InitializationSettings initializationSettings = InitializationSettings(
-    android: initializationSettingsAndroid,
-  );
-
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-  final androidPlugin =
-      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-
-  await androidPlugin?.createNotificationChannel(kAlarmChannel);
-  await androidPlugin?.requestNotificationsPermission();
-  await androidPlugin?.requestExactAlarmsPermission();
-
-  runApp(const DawaiProApp());
+  await Alarm.init();
+  runApp(const DawaiProAlarmApp());
 }
 
-class DawaiProApp extends StatelessWidget {
-  const DawaiProApp({super.key});
+class DawaiProAlarmApp extends StatelessWidget {
+  const DawaiProAlarmApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'DAWAI PRO',
+      title: 'DAWAI PRO ALARM',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0A1118),
@@ -56,49 +22,25 @@ class DawaiProApp extends StatelessWidget {
           surface: Color(0xFF111E2E),
         ),
       ),
-      home: const CustomAlarmScreen(),
+      home: const MorningStyleAlarmScreen(),
     );
   }
 }
 
-class CustomAlarmScreen extends StatefulWidget {
-  const CustomAlarmScreen({super.key});
+class MorningStyleAlarmScreen extends StatefulWidget {
+  const MorningStyleAlarmScreen({super.key});
 
   @override
-  State<CustomAlarmScreen> createState() => _CustomAlarmScreenState();
+  State<MorningStyleAlarmScreen> createState() => _MorningStyleAlarmScreenState();
 }
 
-class _CustomAlarmScreenState extends State<CustomAlarmScreen> {
-  String _statusText = "جاهز — اختر ساعة محددة لضبط منبه الدواء";
-  String _scheduledTimeStr = "لم يتم ضبط منبه بعد";
+class _MorningStyleAlarmScreenState extends State<MorningStyleAlarmScreen> {
+  static const int _alarmId = 101;
+  String _timeLabel = "لم يتم ضبط منبه بعد";
+  String _statusLabel = "اختر ساعة ودقيقة ثم أغلق التطبيق واختبر الرنين";
 
-  NotificationDetails _buildDetails() {
-    final androidDetails = AndroidNotificationDetails(
-      kAlarmChannel.id,
-      kAlarmChannel.name,
-      channelDescription: kAlarmChannel.description,
-      importance: Importance.max,
-      priority: Priority.max,
-      playSound: true,
-      enableVibration: true,
-      color: const Color(0xFF00FF88),
-      category: AndroidNotificationCategory.alarm,
-    );
-    return NotificationDetails(android: androidDetails);
-  }
-
-  Future<void> _requestExactPermissionAgain() async {
-    final androidPlugin =
-        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    final granted = await androidPlugin?.requestExactAlarmsPermission();
-    setState(() {
-      _statusText = "حالة إذن المنبهات الدقيقة: ${granted ?? 'غير معروف'}";
-    });
-  }
-
-  Future<void> _pickAndScheduleAlarm(BuildContext context) async {
-    final TimeOfDay? pickedTime = await showTimePicker(
+  Future<void> _pickAlarmTime() async {
+    final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
       builder: (context, child) {
@@ -114,103 +56,107 @@ class _CustomAlarmScreenState extends State<CustomAlarmScreen> {
       },
     );
 
-    if (pickedTime == null) {
-      setState(() {
-        _statusText = "تم إلغاء اختيار الوقت.";
-      });
-      return;
+    if (picked == null) return;
+
+    final now = DateTime.now();
+    var targetDateTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      picked.hour,
+      picked.minute,
+    );
+
+    if (!targetDateTime.isAfter(now)) {
+      targetDateTime = targetDateTime.add(const Duration(days: 1));
     }
 
     try {
-      final now = tz.TZDateTime.now(tz.local);
-      var scheduledDate = tz.TZDateTime(
-        tz.local,
-        now.year,
-        now.month,
-        now.day,
-        pickedTime.hour,
-        pickedTime.minute,
+      final alarmSettings = AlarmSettings(
+        id: _alarmId,
+        dateTime: targetDateTime,
+        assetAudioPath: null,
+        loopAudio: true,
+        vibrate: true,
+        warningNotificationOnKill: true,
+        androidFullScreenIntent: true,
+        volumeSettings: VolumeSettings.fade(
+          volume: 1.0,
+          fadeDuration: const Duration(seconds: 3),
+          volumeEnforced: true,
+        ),
+        notificationSettings: NotificationSettings(
+          title: '⏰ منبه الدواء - DAWAI PRO',
+          body: 'حان موعد الدواء المحدد الساعة ${picked.format(context)}',
+          stopButton: 'إيقاف المنبه',
+          icon: 'mipmap/ic_launcher',
+        ),
       );
 
-      if (!scheduledDate.isAfter(now)) {
-        scheduledDate = scheduledDate.add(const Duration(days: 1));
-      }
-
-      final androidPlugin =
-          flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      final canExact = await androidPlugin?.canScheduleExactNotifications();
-
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        100,
-        '💊 وقت الدواء - DAWAI PRO',
-        'حان موعد تناول الدواء المحدد في الساعة ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}',
-        scheduledDate,
-        _buildDetails(),
-        androidScheduleMode: (canExact == false)
-            ? AndroidScheduleMode.inexactAllowWhileIdle
-            : AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
-
-      final pending =
-          await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+      final success = await Alarm.set(alarmSettings: alarmSettings);
 
       final formatted =
-          "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
+          "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
 
       setState(() {
-        _scheduledTimeStr = formatted;
-        _statusText =
-            "تمت الجدولة على $formatted | المنبهات المنتظرة: ${pending.length} | Exact: ${canExact ?? 'غير محدد'}";
+        _timeLabel = formatted;
+        _statusLabel = success
+            ? "تم ضبط المنبه على $formatted — سيظل يرن حتى توقفه."
+            : "تعذر تفعيل المنبه — تحقق من صلاحيات المنبهات والإشعارات في الهاتف.";
       });
     } catch (e) {
       setState(() {
-        _statusText = "حدث خطأ أثناء الجدولة: $e";
+        _statusLabel = "خطأ أثناء ضبط المنبه: $e";
       });
     }
+  }
+
+  Future<void> _stopAlarm() async {
+    await Alarm.stop(_alarmId);
+    setState(() {
+      _statusLabel = "تم إيقاف المنبه.";
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DAWAI PRO | منبه الأدوية المخصص'),
+        title: const Text('DAWAI PRO | منبه بصوت مستمر'),
         backgroundColor: const Color(0xFF111E2E),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Icon(
-              Icons.alarm_add_rounded,
-              size: 80,
+              Icons.alarm_on_rounded,
+              size: 82,
               color: Color(0xFF00FF88),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             const Text(
-              'وقت المنبه الحالي:',
+              'موعد المنبه:',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(
-              _scheduledTimeStr,
+              _timeLabel,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFF00FF88),
-                fontSize: 36,
+                fontSize: 38,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () => _pickAndScheduleAlarm(context),
+              onPressed: _pickAlarmTime,
               icon: const Icon(Icons.access_time_filled),
-              label: const Text('اختر وقت المنبه (ساعة ودقيقة)'),
+              label: const Text('اختيار وقت المنبه'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00FF88),
                 foregroundColor: const Color(0xFF0A1118),
@@ -223,15 +169,15 @@ class _CustomAlarmScreenState extends State<CustomAlarmScreen> {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: _requestExactPermissionAgain,
-              icon: const Icon(Icons.verified_user, color: Color(0xFF00FF88)),
+              onPressed: _stopAlarm,
+              icon: const Icon(Icons.stop_circle, color: Colors.redAccent),
               label: const Text(
-                'فحص / طلب إذن المنبهات الدقيقة',
-                style: TextStyle(color: Colors.white),
+                'إيقاف المنبه الحالي',
+                style: TextStyle(color: Colors.redAccent, fontSize: 16),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white24),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: const BorderSide(color: Colors.redAccent),
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
             const SizedBox(height: 24),
@@ -243,7 +189,7 @@ class _CustomAlarmScreenState extends State<CustomAlarmScreen> {
                 border: Border.all(color: Colors.white12),
               ),
               child: Text(
-                _statusText,
+                _statusLabel,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
